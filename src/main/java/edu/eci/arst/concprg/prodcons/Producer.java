@@ -18,7 +18,6 @@ import java.util.logging.Logger;
 public class Producer extends Thread {
     private final Object monitor;
     private LinkedBlockingQueue<Integer> queue = null;
-    private volatile boolean paused;
     private int dataSeed = 0;
     private Random rand=null;
     private final long stockLimit;
@@ -33,24 +32,14 @@ public class Producer extends Thread {
     @Override
     public void run() {
         while (true) {
-
             dataSeed = dataSeed + rand.nextInt(100);
-            System.out.println("Producer added " + dataSeed);
-            queue.add(dataSeed);
-            
             try {
-                Thread.sleep(1000);
+                queue.put(dataSeed);
+                System.out.println("Producer added " + dataSeed);
+                Thread.sleep(500); // 0.5s
             } catch (InterruptedException ex) {
                 Logger.getLogger(Producer.class.getName()).log(Level.SEVERE, null, ex);
             }
-            paused = queue.isEmpty();
-            if(!paused) resumeAll();
-        }
-    }
-
-    void resumeAll(){
-        synchronized (monitor){
-            monitor.notifyAll();
         }
     }
 }
