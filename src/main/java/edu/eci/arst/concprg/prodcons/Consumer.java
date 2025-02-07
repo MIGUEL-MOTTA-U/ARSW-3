@@ -15,10 +15,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Consumer extends Thread{
 
     private final LinkedBlockingQueue<Integer> queue;
-    private final Object monitor;
-    public Consumer(LinkedBlockingQueue<Integer> queue, Object monitor){
+    public Consumer(LinkedBlockingQueue<Integer> queue){
         this.queue=queue;
-        this.monitor = monitor;
     }
 
     @Override
