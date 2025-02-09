@@ -1,6 +1,7 @@
 package edu.eci.arso.blacklist;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Checker extends Thread {
 
+    private final CountDownLatch latch;
     /** Counter for the number of insecure directions found. */
     private AtomicInteger unsecureDirectionsFound;
 
@@ -31,11 +33,12 @@ public class Checker extends Thread {
      * @param unsecureDirectionsFound The counter for found insecure addresses.
      * @param isInsecure Shared flag to indicate if the insecure threshold has been reached.
      */
-    public Checker(List<String> blackList, List<String> directionsToCheck, AtomicInteger unsecureDirectionsFound, AtomicBoolean isInsecure) {
+    public Checker(List<String> blackList, List<String> directionsToCheck, AtomicInteger unsecureDirectionsFound, AtomicBoolean isInsecure, CountDownLatch latch) {
         this.blackList = blackList;
         this.directionsToCheck = directionsToCheck;
         this.unsecureDirectionsFound = unsecureDirectionsFound;
         this.isInsecure = isInsecure;
+        this.latch = latch;
     }
 
     /**
@@ -49,6 +52,7 @@ public class Checker extends Thread {
             if (isInsecure.get()) {
                 // If another thread has already reached the threshold, stop execution
                 System.out.println("Stopping thread...");
+                latch.countDown();
                 return;
             }
             if (blackList.contains(direction)) {
@@ -59,9 +63,11 @@ public class Checker extends Thread {
                 if (unsecureDirectionsFound.get() >= BlackListChecker.BLACK_LIST_ALARM_COUNT) {
                     isInsecure.set(true);
                     System.out.println("Stopping thread...");
+                    latch.countDown();
                     return;
                 }
             }
         }
+        latch.countDown();
     }
 }

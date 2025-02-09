@@ -2,6 +2,7 @@ package edu.eci.arso.blacklist;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BlackListChecker extends Thread {
     /** Counter for the number of insecure addresses found. */
     private AtomicInteger unsecureDirections = new AtomicInteger(0);
+    private final CountDownLatch latch;
 
     /** Threshold for triggering an alarm when the number of blacklisted addresses is exceeded. */
     public static int BLACK_LIST_ALARM_COUNT;
@@ -43,12 +45,13 @@ public class BlackListChecker extends Thread {
      * @param NUMBER_THREADS    The number of threads to be used for checking.
      * @param BLACK_LIST_ALARM_COUNT The threshold for flagging an insecure situation.
      */
-    public BlackListChecker(List<String> blackList, List<String> directionsToCheck, int NUMBER_THREADS, int BLACK_LIST_ALARM_COUNT) {
+    public BlackListChecker(List<String> blackList, List<String> directionsToCheck, int NUMBER_THREADS, int BLACK_LIST_ALARM_COUNT, CountDownLatch latch) {
         this.blackList = blackList;
         this.directionsToCheck = directionsToCheck;
         this.checkers = new ArrayList<>();
         this.BLACK_LIST_ALARM_COUNT = BLACK_LIST_ALARM_COUNT;
         this.NUMBER_THREADS = NUMBER_THREADS;
+        this.latch = latch;
     }
 
     /**
@@ -69,16 +72,19 @@ public class BlackListChecker extends Thread {
             }
 
             // Create and start a new checker thread
-            Checker checker = new Checker(blackList, directionsToCheck.subList(start, end), unsecureDirections, isInsecure);
+            Checker checker = new Checker(blackList, directionsToCheck.subList(start, end), unsecureDirections, isInsecure, latch);
             checkers.add(checker);
             checker.start();
 
-            // Wait for the thread to finish before proceeding (sequential execution)
-            try {
-                checker.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+
+        }
+
+        // Wait for the threads to finish before proceeding with sequential execution of the thread
+        try{
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
         }
 
         // Output the results of the verification process

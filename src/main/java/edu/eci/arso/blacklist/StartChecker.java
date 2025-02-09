@@ -3,6 +3,7 @@ package edu.eci.arso.blacklist;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * The {@code StartChecker} class initializes and executes the blacklist verification process.
@@ -18,7 +19,7 @@ public class StartChecker {
     private static final int BLACK_LIST_ALARM_COUNT = 10;
 
     /** Number of IP addresses to be generated for verification. */
-    private static final int NUMBER_DIRECTIONS = 1_000_000;
+    private static final int NUMBER_DIRECTIONS = 50_000_000;
 
     /** Number of blacklisted IP addresses to be generated. */
     private static final int NUMBER_BLACKLIST = 50;
@@ -37,9 +38,10 @@ public class StartChecker {
 
         System.out.println("Starting verification with " + NUMBER_THREADS + " threads...");
         long startTime = System.currentTimeMillis();
+        CountDownLatch latch = new CountDownLatch(NUMBER_THREADS);
 
         // Create and execute the checker
-        BlackListChecker blackListChecker = new BlackListChecker(blackList, directionsToCheck, NUMBER_THREADS, BLACK_LIST_ALARM_COUNT);
+        BlackListChecker blackListChecker = new BlackListChecker(blackList, directionsToCheck, NUMBER_THREADS, BLACK_LIST_ALARM_COUNT, latch);
         blackListChecker.start();
 
         // Wait for execution to complete
