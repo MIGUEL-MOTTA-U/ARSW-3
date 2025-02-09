@@ -16,16 +16,16 @@ public class StartChecker {
     private static final int NUMBER_THREADS = 3;
 
     /** Threshold for triggering an alarm when the number of blacklisted addresses is exceeded. */
-    private static final int BLACK_LIST_ALARM_COUNT = 10;
+    private static final int BLACK_LIST_ALARM_COUNT = 1000;
 
     /** Number of IP addresses to be generated for verification. */
-    private static final int NUMBER_DIRECTIONS = 50_000_000;
+    private static final int NUMBER_DIRECTIONS = 1_000_000_000;
 
     /** Number of blacklisted IP addresses to be generated. */
-    private static final int NUMBER_BLACKLIST = 50;
+    private static final int NUMBER_BLACKLIST = 1000;
 
     /** Number of blacklisted addresses that will be inserted into the list to check. */
-    private static final int PRESENT_BLACKLIST_NUMBERS_ON_LIST_TO_CHECK = 10;
+    private static final int PRESENT_BLACKLIST_NUMBERS_ON_LIST_TO_CHECK = 1000;
 
     /**
      * The main method that initiates the blacklist verification process.
@@ -62,13 +62,8 @@ public class StartChecker {
      * @return A list containing randomly generated IP addresses.
      */
     private static List<String> generateRandomIPs(int count) {
-        List<String> ipList = new ArrayList<>();
-        Random rand = new Random();
-        for (int i = 0; i < count; i++) {
-            String ip = rand.nextInt(256) + "." + rand.nextInt(256) + "." + rand.nextInt(256) + "." + rand.nextInt(256);
-            ipList.add(ip);
-        }
-        return ipList;
+        ConcurrentIPGenerator generator = new ConcurrentIPGenerator(1000, NUMBER_THREADS);
+        return generator.generateIPs();
     }
 
     /**
