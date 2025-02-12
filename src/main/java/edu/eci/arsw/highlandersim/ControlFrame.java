@@ -20,12 +20,15 @@ import java.awt.event.ActionEvent;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import java.awt.Color;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JScrollBar;
 
 public class ControlFrame extends JFrame {
 
     private static final int DEFAULT_IMMORTAL_HEALTH = 100;
     private static final int DEFAULT_DAMAGE_VALUE = 10;
+    private AtomicBoolean paused;
+    private final Object monitor;
 
     private JPanel contentPane;
 
@@ -56,6 +59,8 @@ public class ControlFrame extends JFrame {
      * Create the frame.
      */
     public ControlFrame() {
+        monitor = new Object();
+        paused = new AtomicBoolean(false);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(100, 100, 647, 248);
         contentPane = new JPanel();
@@ -91,6 +96,7 @@ public class ControlFrame extends JFrame {
                 /*
 				 * COMPLETAR
                  */
+                paused.set(true);
                 int sum = 0;
                 for (Immortal im : immortals) {
                     sum += im.getHealth();
@@ -111,7 +117,10 @@ public class ControlFrame extends JFrame {
                 /**
                  * IMPLEMENTAR
                  */
-
+                synchronized (monitor){
+                    paused.set(false);
+                    monitor.notifyAll();
+                }
             }
         });
 
@@ -142,6 +151,10 @@ public class ControlFrame extends JFrame {
 
     }
 
+    public boolean isPaused(){
+        return paused.get();
+    }
+
     public List<Immortal> setupInmortals() {
 
         ImmortalUpdateReportCallback ucb=new TextAreaUpdateReportCallback(output,scrollPane);
@@ -149,10 +162,9 @@ public class ControlFrame extends JFrame {
         try {
             int ni = Integer.parseInt(numOfImmortals.getText());
 
-            List<Immortal> il = new LinkedList<Immortal>();
-
+            List<Immortal> il = new LinkedList<>();
             for (int i = 0; i < ni; i++) {
-                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb);
+                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb, this, monitor);
                 il.add(i1);
             }
             return il;

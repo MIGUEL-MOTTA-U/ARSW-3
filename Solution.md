@@ -250,13 +250,13 @@ soluciones impactan en el rendimiento y la consistencia del programa.
 >    * Cada jugador, permanentemente, ataca a algún otro inmortal. El que primero ataca le resta M puntos de vida a su contrincante, y aumenta en esta misma cantidad sus propios puntos de vida.
 >    * El juego podría nunca tener un único ganador. Lo más probable es que al final sólo queden dos, peleando indefinidamente quitando y sumando puntos de vida.
 > 
-> 2. Revise el código e identifique cómo se implemento la funcionalidad antes indicada. Dada la intención del juego, un invariante debería ser que la sumatoria de los puntos de vida de todos los jugadores siempre sea el mismo(claro está, en un instante de tiempo en el que no esté en proceso una operación de incremento/reducción de tiempo). Para este caso, para N jugadores, cual debería ser este valor?.
+> 2. Revise el código e identifique cómo se implementó la funcionalidad antes indicada. Dada la intención del juego, un invariante debería ser que la sumatoria de los puntos de vida de todos los jugadores siempre sea el mismo(claro está, en un instante de tiempo en el que no esté en proceso una operación de incremento/reducción de tiempo). Para este caso, para N jugadores, cual debería ser este valor?.
 > 
-> 3. Ejecute la aplicación y verifique cómo funcionan las opción ‘pause and check’. Se cumple el invariante?.
+> 3. Ejecute la aplicación y verifique cómo funcionan la opción ‘pause and check’. ¿Se cumple el invariante?.
 > 
 > 4. Una primera hipótesis para que se presente la condición de carrera para dicha función (pause and check), es que el programa consulta la lista cuyos valores va a imprimir, a la vez que otros hilos modifican sus valores. Para corregir esto, haga lo que sea necesario para que efectivamente, antes de imprimir los resultados actuales, se pausen todos los demás hilos. Adicionalmente, implemente la opción ‘resume’.
 > 
-> 5. Verifique nuevamente el funcionamiento (haga clic muchas veces en el botón). Se cumple o no el invariante?.
+> 5. Verifique nuevamente el funcionamiento (haga clic muchas veces en el botón). ¿Se cumple o no el invariante?.
 > 
 >    6. Identifique posibles regiones críticas en lo que respecta a la pelea de los inmortales. Implemente una estrategia de bloqueo que evite las condiciones de carrera. Recuerde que si usted requiere usar dos o más ‘locks’ simultáneamente, puede usar bloques sincronizados anidados:
 > 
@@ -268,18 +268,122 @@ soluciones impactan en el rendimiento y la consistencia del programa.
 >        }
 >        ```
 > 
-> 7. Tras implementar su estrategia, ponga a correr su programa, y ponga atención a si éste se llega a detener. Si es así, use los programas jps y jstack para identificar por qué el programa se detuvo.
+> 7. Tras implementar su estrategia, ponga a correr su programa, y ponga atención a si este se llega a detener. Si es así, use los programas jps y jstack para identificar por qué el programa se detuvo.
 >    
 > 8. Plantee una estrategia para corregir el problema antes identificado (puede revisar de nuevo las páginas 206 y 207 de _Java Concurrency in Practice_).
 >    
 > 9. Una vez corregido el problema, rectifique que el programa siga funcionando de manera consistente cuando se ejecutan 100, 1000 o 10000 inmortales. Si en estos casos grandes se empieza a incumplir de nuevo el invariante, debe analizar lo realizado en el paso 4.
 >    
 > 10. Un elemento molesto para la simulación es que en cierto punto de la misma hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' ya muertos. Es necesario ir suprimiendo los inmortales muertos de la simulación a medida que van muriendo. Para esto:
->    * Analizando el esquema de funcionamiento de la simulación, esto podría crear una condición de carrera? Implemente la funcionalidad, ejecute la simulación y observe qué problema se presenta cuando hay muchos 'inmortales' en la misma. Escriba sus conclusiones al respecto en el archivo RESPUESTAS.txt.
+>    * ¿Analizando el esquema de funcionamiento de la simulación, esto podría crear una condición de carrera? Implemente la funcionalidad, ejecute la simulación y observe qué problema se presenta cuando hay muchos 'inmortales' en la misma. Escriba sus conclusiones al respecto en el archivo RESPUESTAS.txt.
 >    * Corrija el problema anterior __SIN hacer uso de sincronización__, pues volver secuencial el acceso a la lista compartida de inmortales haría extremadamente lenta la simulación.
 >      
 > 11. Para finalizar, implemente la opción STOP.
 ## Solución
+> Esta implementación, inicialmente, se llevó a cabo con la siguiente estrategia: 
+> 1. Se Crean los luchadores de acuerdo al número ingresado de luchadores, que por defecto son 3.
+> 2. Se inicializan esos luchadores `inmortales`.
+> 3. Un inmortal peleará continuamente a menos que su vida sea menor a cero, de lo contrario
+> Reportará que ha sido eliminado (pero continuará en ejecución).
+
+> La invariante de la sumatoria de los puntos de vida, debería ser el mismo valor en todo momento,
+> además, si se tiene que los luchadores comparten la misma cantidad de daño y la misma cantidad de vida
+> inicialmente, y estos valores no cambian. La invariante de la sumatoria de vida de todos los jugadores, siendo 
+> N jugadores, está dada por la expresión:
+> $$ Invariante = (\text{Vida inicial}) \times N $$
+> En este caso tenemos que la vida inicial es 100, entonces:
+> $$ Invariante = 100 \times N $$
+> 
+
+> Al ejecutar la aplicación, se evidencia que la invariante no se mantiene:
+> 
+> ![](img/picture1.png) 
+> #### Valor de invariante: `340`
+> 
+> Y Sigue cambiando:
+> 
+> ![](img/picture2.png)
+> #### Valor de invariante: `1540`
+> 
+> De modo que no se cumple la invariante. 
+>
+
+> Para implementar un bloqueo en los hilos, lo hicimos de la siguiente manera:
+> 1. Implementamos un estado en el controlador, esto para que esta clase controle desde un atributo de estado
+> el estado de ejecución de los hilos, usando un objeto de tipo 
+> [`AtomicBoolean`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/atomic/AtomicBoolean.html) y
+> un objeto monitor, que permite controlar los hilos de 
+> [`Immortal`](src/main/java/edu/eci/arsw/highlandersim/Immortal.java)
+> 2. Agregar una condición que hace la verificación del estado en el hilo de tipo
+> [`Immortal`](src/main/java/edu/eci/arsw/highlandersim/Immortal.java) y lo detiene si el estado del controlador
+> en pausa es verdadero.
+> ### En clase [`Immortal`](src/main/java/edu/eci/arsw/highlandersim/Immortal.java)
+> ```java
+> public class Immortal extends Thread{
+> // Added the attributes:
+> private ControlFrame controller;
+> private final Object monitor;
+> @Override
+>   public void run() {
+>       while (true) {
+>           // Added the check of controller state (with the AtomicBoolean)
+>           while (controller.isPaused()){
+>               synchronized (monitor){
+>                   try{
+>                       monitor.wait();
+>                   } catch (InterruptedException e) {
+>                       Thread.currentThread().interrupt();
+>                       e.printStackTrace();
+>                   }
+>               }
+>           }
+>         // Continues the process
+>        }
+>     }
+>  }
+> ```
+> 
+> ### En clase `ControlFrame`
+> ```java
+>  public class ControlFrame extends JFrame {
+>     // Added the attributes
+>     private static AtomicBoolean paused;
+>     private final Object monitor;
+> 
+>     // Modified the methods to pause and resume the threads:
+>     btnResume.addActionListener(new ActionListener() {
+>            public void actionPerformed(ActionEvent e) {
+>                /**
+>                 * IMPLEMENTAR
+>                 */
+>                synchronized (monitor){
+>                    paused.set(false);
+>                    monitor.notifyAll();
+>                }
+>            }
+>        });
+>     btnPauseAndCheck.addActionListener(new ActionListener() {
+>            public void actionPerformed(ActionEvent e) {
+>                /* COMPLETAR */
+>                paused.set(true);
+>                int sum = 0;
+>                for (Immortal im : immortals) {
+>                    sum += im.getHealth();
+>                }
+>                statisticsLabel.setText("<html>"+immortals.toString()+"<br>Health sum:"+ sum);
+>            }
+>        });
+> 
+>  }
+> ```
+> #### El resultado fue:
+> 
+> ![](img/picture3.png)
+> 
+> ![](img/picture4.png)
+> 
+> #### De modo que la invariante aún no se cumple.
+> 
 
 ### Criterios de evaluación
 > #### Diseño:

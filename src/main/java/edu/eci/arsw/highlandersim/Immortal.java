@@ -6,7 +6,8 @@ import java.util.Random;
 public class Immortal extends Thread {
 
     private ImmortalUpdateReportCallback updateCallback=null;
-    
+    private ControlFrame controller;
+    private final Object monitor;
     private int health;
     
     private int defaultDamageValue;
@@ -18,18 +19,32 @@ public class Immortal extends Thread {
     private final Random r = new Random(System.currentTimeMillis());
 
 
-    public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb) {
+    public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb, ControlFrame controller, Object monitor) {
         super(name);
         this.updateCallback=ucb;
         this.name = name;
         this.immortalsPopulation = immortalsPopulation;
         this.health = health;
         this.defaultDamageValue=defaultDamageValue;
+        this.controller = controller;
+        this.monitor = monitor;
     }
 
+    @Override
     public void run() {
 
         while (true) {
+            while (controller.isPaused()){
+                synchronized (monitor){
+                    try{
+                        monitor.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        e.printStackTrace();
+                    }
+                }
+            }
+
             Immortal im;
 
             int myIndex = immortalsPopulation.indexOf(this);
