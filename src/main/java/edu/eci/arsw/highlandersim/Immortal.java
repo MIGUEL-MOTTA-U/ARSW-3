@@ -48,10 +48,11 @@ public class Immortal extends Thread {
             // Realizar ataque mientras no este pausado
             Immortal im;
             int myIndex = immortalsPopulation.indexOf(this);
+            System.out.println(immortalsPopulation.size());
             int nextFighterIndex = r.nextInt(immortalsPopulation.size());
             //avoid self-fight
             if (nextFighterIndex == myIndex) {
-                nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
+                nextFighterIndex = ((nextFighterIndex + 1) % (immortalsPopulation.size() - 1));
             }
             im = immortalsPopulation.get(nextFighterIndex);
 
@@ -62,6 +63,7 @@ public class Immortal extends Thread {
                 e.printStackTrace();
             }
         }
+        // una vez no tenga vida es descartado para evitar batallas fallidas
         immortalsPopulation.remove(this);
     }
 

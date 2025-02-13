@@ -397,13 +397,127 @@ soluciones impactan en el rendimiento y la consistencia del programa.
 >     * En los bloques anidados de sincronización requeridos para lo anterior, se debe garantizar que si los mismos locks son usados en dos peleas simultánemante, éstos será usados en el mismo orden para evitar deadlocks.
 >     * En caso de sincronizar el acceso a la pelea con un LOCK común, se evaluará como M, pues esto hace secuencial todas las peleas.
 >     * La lista de inmortales debe reducirse en la medida que éstos mueran, pero esta operación debe realizarse SIN sincronización, sino haciendo uso de una colección concurrente (no bloqueante).
+>   Para ello, implementamos una lista de tipo `CopyOnWriteArrayList` que permite la eliminación de elementos sin bloquear la lista.
+>     
+```    
+     public List<Immortal> setupInmortals() {
+
+        ImmortalUpdateReportCallback ucb=new TextAreaUpdateReportCallback(output,scrollPane);
+        
+        try {
+            int ni = Integer.parseInt(numOfImmortals.getText());
+
+            List<Immortal> il = new CopyOnWriteArrayList<>();
+            for (int i = 0; i < ni; i++) {
+                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb, this, monitor);
+                il.add(i1);
+            }
+            return il;
+        } catch (NumberFormatException e) {
+            JOptionPane.showConfirmDialog(null, "Número inválido.");
+            return null;
+        }
+
+    }
+```
 > 
 >	
 > 
 >  * Funcionalidad:
->      * Se cumple con el invariante al usar la aplicación con 10, 100 o 1000 hilos.
+>      
 >      * La aplicación puede reanudar y finalizar(stop) su ejecución.
 > 
+> 6. Identifique posibles regiones críticas en lo que respecta a la 
+> pelea de los inmortales. Implemente una estrategia de bloqueo que evite las
+> condiciones de carrera. Recuerde que si usted requiere usar dos o más 
+> ‘locks’ simultáneamente, puede usar bloques sincronizados anidados:
+> 
+> La región crítica se presenta en la pelea de los inmortales, donde se accede a la lista
+> de inmortales para seleccionar un inmortal aleatorio y realizar la pelea. Para evitar, dos inmortales pueden
+> ser seleccionados por dos hilos diferentes y realizar la pelea al mismo tiempo, lo que puede causar una condición de carrera.
+> 7. Tras implementar su estrategia, ponga a correr su programa, y ponga 
+> atención a si este se llega a detener. Si es así, use los programas jps y 
+> jstack para identificar por qué el programa se detuvo.
+> jps y jstack son herramientas de línea de comandos que permiten obtener información sobre los procesos de Java en ejecución y los hilos de un proceso, respectivamente.
+> jps sirve para obtener el ID de un proceso Java en ejecución, mientras que jstack permite obtener un volcado de la pila de un proceso Java en ejecución.
+> con jstack se puede obtener información como: mostrará la pila de ejecución de todos los hilos en el proceso. Si hay un interbloqueo, jstack lo indicará explícitamente con un mensaje como:
+> ```
+> Found one Java-level deadlock:
+> =============================
+> "Thread-1":
+> waiting to lock Monitor 0x00007f8e9c0020a0 (Object@0x6d06d69b),
+> which is held by "Thread-2"
+> "Thread-2":
+> waiting to lock Monitor 0x00007f8e9c0020b8 (Object@0x7d08f69c),
+> which is held by "Thread-1"
+> ```
+> ![](img/picture5.png)
+> ![](img/picture6.png)
+> 8. Plantee una estrategia para corregir el problema antes identificado
+> Para corregir el problema de deadlock, hay que bloquear los objetos de manera ordenada,
+> en nuestro caso, usamos el nombre del hilo, para determinar cual hilo es bloqueado primero.
+> El nombre del hilo era único y estaba asociado al número que tiene.
+> También, como dos inmortales pueden acceder a la misma lista al mismo tiempo, se
+> 9. Una vez corregido el problema, rectifique que el programa siga funcionando de 
+> manera consistente cuando se ejecutan 100, 1000 o 10000 inmortales. 
+> Si en estos casos grandes se empieza a incumplir de nuevo el invariante, 
+> debe analizar lo realizado en el paso 4.
+> * Se cumple con el invariante al usar la aplicación con 100, 1000 o 10000 hilos.
+>
+>- 3 hilos:
+>![](img/3-threads-1.png)
+>![](img/3-threads-2.png)
+>- 100 hilos:
+> ![](img/100-threads-1.png)
+> ![](img/100-threads-2.png)
+>- 1000 hilos:
+>![](img/1000-threads-1.png)
+>![](img/1000-threads-2.png)
+>  * - 10000 hilos:
+>
+> 10. UUn elemento molesto para la simulación es que en cierto punto de la misma 
+> hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' 
+> ya muertos. Es necesario ir suprimiendo los inmortales muertos de la 
+> simulación a medida que van muriendo. Para esto:
+> Para ello validamos si el inmortal está vivo, en caso de que no, se saca de la lista
+> de población de inmortales para que no sea tomado en cuenta por los demás
+> ```
+> @Override
+    public void run() {
+        // evitar esperas innecesarias
+        while (health > 0) {
+            // pausar la ejecución
+            while (controller.isPaused()) {
+                synchronized (monitor) {
+                    try {
+                        monitor.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        e.printStackTrace();
+                    }
+                }
+            }
+            // Realizar ataque mientras no este pausado
+            Immortal im;
+            int myIndex = immortalsPopulation.indexOf(this);
+            int nextFighterIndex = r.nextInt(immortalsPopulation.size());
+            //avoid self-fight
+            if (nextFighterIndex == myIndex) {
+                nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
+            }
+            im = immortalsPopulation.get(nextFighterIndex);
+
+            this.fight(im);
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        // una vez no tenga vida es descartado para evitar batallas fallidas
+        immortalsPopulation.remove(this);
+    }
+> ```
 
 
 ## Conclusiones
@@ -415,7 +529,11 @@ que los hilos productores y consumidores trabajaran de manera más equilibrada
 sin sobrecargar la cola compartida. En la segunda parte, implementar 
 correctamente la sincronización nos ayudó a evitar problemas de condiciones 
 de carrera y a asegurar que los hilos se detuvieran adecuadamente al cumplir 
-con el número establecido de resultados en nuestra búsqueda distribuida. 
+con el número establecido de resultados en nuestra búsqueda distribuida.
+
+Reducimos el consumo de recursos innecesarias, eliminando esperas activas en ciclos
+while(true), reemplazandolos por condiciones que tienen sentido. Como que el hilo se siga ejecutando
+mientras el inmortal tenga vida.
 
 Finalmente, al simular inmortales, logramos identificar y solucionar 
 varios problemas relacionados con los bloqueos y la actualización 
@@ -424,4 +542,4 @@ hilos en simulaciones a gran escala, conseguimos mantener la consistencia del
 programa y aumentar su velocidad sin incurrir en sincronizaciones pesadas. 
 En resumen, esta experiencia nos brindó una comprensible visión de cómo 
 gestionar la concurrencia en aplicaciones complejas y aplicar técnicas 
-de sincronización que garanticen un funcionamiento eficiente y correcto.
+de sincronización, como los bloqueos anidados ordenados, que garanticen un funcionamiento eficiente y correcto.
