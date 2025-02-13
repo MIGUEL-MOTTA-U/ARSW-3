@@ -474,6 +474,8 @@ soluciones impactan en el rendimiento y la consistencia del programa.
 >![](img/1000-threads-1.png)
 >![](img/1000-threads-2.png)
 >  * - 10000 hilos:
+>![](img/picture12.png)
+>![](img/picture13.png)
 >
 > 10. UUn elemento molesto para la simulación es que en cierto punto de la misma 
 > hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' 
