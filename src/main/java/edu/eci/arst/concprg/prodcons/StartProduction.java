@@ -16,14 +16,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class StartProduction {
-    private static final Object monitor = new Object();
-    
     public static void main(String[] args) {
+        int maxItems = 10;
+        LinkedBlockingQueue<Integer> queue=new LinkedBlockingQueue<>(maxItems);
 
-        LinkedBlockingQueue<Integer> queue=new LinkedBlockingQueue<>();
-        
-        
-        new Producer(queue,Long.MAX_VALUE, monitor).start();
+        new Producer(queue,maxItems).start();
 
         //let the producer create products for 5 seconds (stock).
         try {
@@ -31,9 +28,7 @@ public class StartProduction {
         } catch (InterruptedException ex) {
             Logger.getLogger(StartProduction.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
-        new Consumer(queue, monitor).start();
+        new Consumer(queue).start();
     }
     
 
