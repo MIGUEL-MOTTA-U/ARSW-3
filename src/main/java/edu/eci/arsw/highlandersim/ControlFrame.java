@@ -73,9 +73,14 @@ public class ControlFrame extends JFrame {
         contentPane.add(toolBar, BorderLayout.NORTH);
 
         final JButton btnStart = new JButton("Start");
+        JButton btnPauseAndCheck = new JButton("Pause and check");
+        JButton btnResume = new JButton("Resume");
+        JButton btnStop = new JButton("STOP");
+        btnStop.setEnabled(false);
+
         btnStart.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-
+                btnStop.setEnabled(true);
                 immortals = setupInmortals();
 
                 if (immortals != null) {
@@ -90,7 +95,6 @@ public class ControlFrame extends JFrame {
         });
         toolBar.add(btnStart);
 
-        JButton btnPauseAndCheck = new JButton("Pause and check");
         btnPauseAndCheck.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
@@ -98,6 +102,13 @@ public class ControlFrame extends JFrame {
 				 * COMPLETAR
                  */
                 paused.set(true);
+                // Wait to stop
+                try{
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    ex.printStackTrace();
+                }
                 int sum = 0;
                 for (Immortal im : immortals) {
                     sum += im.getHealth();
@@ -112,7 +123,6 @@ public class ControlFrame extends JFrame {
         });
         toolBar.add(btnPauseAndCheck);
 
-        JButton btnResume = new JButton("Resume");
 
         btnResume.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -136,8 +146,20 @@ public class ControlFrame extends JFrame {
         toolBar.add(numOfImmortals);
         numOfImmortals.setColumns(10);
 
-        JButton btnStop = new JButton("STOP");
+        /* Stop button config */
         btnStop.setForeground(Color.RED);
+        btnStop.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                synchronized (monitor){
+                    for(Immortal immortal: immortals){
+                        immortal.stopThread();
+                    }
+                    btnStart.setEnabled(true);
+                    restartValues();
+                }
+            }
+        });
         toolBar.add(btnStop);
 
         scrollPane = new JScrollPane();
@@ -151,6 +173,11 @@ public class ControlFrame extends JFrame {
         statisticsLabel = new JLabel("Immortals total health:");
         contentPane.add(statisticsLabel, BorderLayout.SOUTH);
 
+    }
+
+    private void restartValues(){
+        this.paused.set(false);
+        this.immortals.clear();
     }
 
     public boolean isPaused(){
