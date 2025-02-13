@@ -32,11 +32,12 @@ public class Immortal extends Thread {
 
     @Override
     public void run() {
-
-        while (true) {
-            while (controller.isPaused()){
-                synchronized (monitor){
-                    try{
+        // evitar esperas innecesarias
+        while (health > 0) {
+            // pausar la ejecución
+            while (controller.isPaused()) {
+                synchronized (monitor) {
+                    try {
                         monitor.wait();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -44,42 +45,45 @@ public class Immortal extends Thread {
                     }
                 }
             }
-
+            // Realizar ataque mientras no este pausado
             Immortal im;
-
             int myIndex = immortalsPopulation.indexOf(this);
-
             int nextFighterIndex = r.nextInt(immortalsPopulation.size());
-
             //avoid self-fight
             if (nextFighterIndex == myIndex) {
                 nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
             }
-
             im = immortalsPopulation.get(nextFighterIndex);
 
             this.fight(im);
-
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
         }
-
+        immortalsPopulation.remove(this);
     }
 
     public void fight(Immortal i2) {
-
-        if (i2.getHealth() > 0) {
-            i2.changeHealth(i2.getHealth() - defaultDamageValue);
-            this.health += defaultDamageValue;
-            updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
-        } else {
-            updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+        Immortal firstInmortal = this;
+        Immortal secondInmortal = i2;
+        // Asegurar un orden consistente durante el bloqueo de objetos
+        if (firstInmortal.getName().compareTo(secondInmortal.getName()) > 0) {
+            firstInmortal = i2;
+            secondInmortal = this;
         }
-
+        synchronized(firstInmortal) {
+            synchronized (secondInmortal) {
+                if (i2.getHealth() > 0) {
+                    i2.changeHealth(i2.getHealth() - defaultDamageValue);
+                    this.changeHealth(getHealth() + defaultDamageValue);
+                    updateCallback.processReport("Fight: " + this + " vs " + i2 + "\n");
+                } else {
+                    updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+                }
+            }
+        }
     }
 
     public void changeHealth(int v) {
@@ -92,7 +96,6 @@ public class Immortal extends Thread {
 
     @Override
     public String toString() {
-
         return name + "[" + health + "]";
     }
 
