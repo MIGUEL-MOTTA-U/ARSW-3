@@ -2,14 +2,15 @@ package edu.eci.arsw.highlandersim;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Immortal extends Thread {
 
     private ImmortalUpdateReportCallback updateCallback=null;
     private ControlFrame controller;
     private final Object monitor;
-    private int health;
-    
+    private final AtomicInteger health;
+    private volatile boolean alive;
     private int defaultDamageValue;
 
     private final List<Immortal> immortalsPopulation;
@@ -21,19 +22,24 @@ public class Immortal extends Thread {
 
     public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb, ControlFrame controller, Object monitor) {
         super(name);
+        this.alive = true;
         this.updateCallback=ucb;
         this.name = name;
         this.immortalsPopulation = immortalsPopulation;
-        this.health = health;
+        this.health = new AtomicInteger(health);
         this.defaultDamageValue=defaultDamageValue;
         this.controller = controller;
         this.monitor = monitor;
     }
 
+    public void stopThread(){
+        this.alive = false;
+    }
+
     @Override
     public void run() {
         // evitar esperas innecesarias
-        while (health > 0) {
+        while (health.get() > 0 && alive) {
             // pausar la ejecución
             while (controller.isPaused()) {
                 synchronized (monitor) {
@@ -45,6 +51,7 @@ public class Immortal extends Thread {
                     }
                 }
             }
+            if (!alive) break;
             // Realizar ataque mientras no este pausado
             Immortal im;
             int myIndex = immortalsPopulation.indexOf(this);
@@ -87,11 +94,11 @@ public class Immortal extends Thread {
     }
 
     public void changeHealth(int v) {
-        health = v;
+        health.set(v);
     }
 
     public int getHealth() {
-        return health;
+        return health.get();
     }
 
     @Override
